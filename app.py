@@ -1,22 +1,6 @@
 import streamlit as st
-from pdf_loader import load_btyes_io
 import json
-from core import pipeline
 import os
-
-
-def inference(query, files, embedding_type):
-
-    # pdfReader = PyPDF2.PdfReader(files[0])
-    # text = ''
-    # for page in pdfReader.pages:
-    #     text += page.extract_text()
-    # st.write(text)
-
-    results, _ = pipeline(query, load_btyes_io(files), embedding_type=embedding_type)
-    prob_per_documents = {result['name']: result['similarity'] for result in results}
-    return prob_per_documents
-
 
 # Path to save job descriptions
 JOB_DESC_FILE = "job_descriptions.json"
@@ -31,28 +15,34 @@ def load_job_descriptions():
 # Function to save job descriptions to the file
 def save_job_descriptions(job_descriptions):
     with open(JOB_DESC_FILE, "w") as f:
-        json.dump(job_descriptions, f)   
+        json.dump(job_descriptions, f, indent=4)
 
-# Sample job descriptions that will be loaded if none are saved
-sample_job_descriptions = {
-    "Software Engineer": """We are looking for a software engineer with experience in Python and web development. The ideal candidate should have a strong background in building scalable and robust applications. Knowledge of frameworks such as Flask and Django is a plus. Experience with front-end technologies like HTML, CSS, and JavaScript is desirable. The candidate should also have a good understanding of databases and SQL. Strong problem-solving and communication skills are required for this role.
-    """,
-    "Data Scientist": """We are seeking a data scientist with expertise in machine learning and statistical analysis. The candidate should have a solid understanding of data manipulation, feature engineering, and model development. Proficiency in Python and popular data science libraries such as NumPy, Pandas, and Scikit-learn is required. Experience with deep learning frameworks like TensorFlow or PyTorch is a plus. Strong analytical and problem-solving skills are essential for this position.
-    """
-}
-
-job_descriptions = load_job_descriptions() or sample_job_descriptions
+# Load job descriptions from the file or fallback to an empty dictionary
+job_descriptions = load_job_descriptions()
 
 # Sidebar for Job Descriptions
 st.sidebar.header("Job Descriptions")
-selected_job = st.sidebar.selectbox("Select a job description", list(job_descriptions.keys()))
-st.sidebar.markdown("```")
-st.sidebar.code(job_descriptions[selected_job])
+selected_job = st.sidebar.selectbox("Select a job description", list(job_descriptions.keys()), key="selected_job")
+if selected_job:
+    st.sidebar.markdown("```")
+    st.sidebar.code(job_descriptions[selected_job])
 
-query = st.text_area("Job Description", height=200, value=sample_job_descriptions[selected_job])
+# Main Page
+st.title("👨🏼‍🎓 Resume Ranker")
+
+# Text area for Job Description
+if selected_job:
+    query = st.text_area("Job Description", height=200, value=job_descriptions[selected_job], key="query")
+else:
+    query = st.text_area("Job Description", height=200, key="query")
+
+# File uploader for resumes
 uploaded_files = st.file_uploader("Upload Resume", accept_multiple_files=True, type=["txt", "pdf"])
+
+# Embedding type selection
 embedding_type = st.selectbox("Embedding Type", ["bert", "minilm", "tfidf"])
 
+# Button to submit the query
 if st.button("Submit"):
     if not query:
         st.warning("Please enter a job description.")
@@ -60,11 +50,36 @@ if st.button("Submit"):
         st.warning("Please upload one or more resumes.")
     else:
         with st.spinner("Processing..."):
-            results = inference(query, uploaded_files,embedding_type)
+            # Assuming 'inference' function does the processing of resumes
+            results = inference(query, uploaded_files, embedding_type)
         st.subheader("Results")
         for document, similarity in results.items():
-            # make similiarty round to 2 decimal place
-            if similarity >= 1:
-                similarity = round(similarity, 2)
+            similarity = round(similarity, 2) if similarity >= 1 else similarity
             st.write(f"- {document}:")
             st.progress(similarity, text=f"{similarity:.2%}")
+
+# Sidebar - Add New Job Description
+st.sidebar.subheader("Manage Job Descriptions")
+
+# Add new job description input fields
+new_job_name = st.sidebar.text_input("New Job Description Name", key="new_job_name")
+new_job_description = st.sidebar.text_area("New Job Description Content", height=150, key="new_job_description")
+
+if st.sidebar.button("Save New Job Description"):
+    if new_job_name and new_job_description:
+        job_descriptions[new_job_name] = new_job_description
+        save_job_descriptions(job_descriptions)
+        st.sidebar.success(f"New job description '{new_job_name}' saved successfully!")
+        st.experimental_rerun()  # To refresh the UI and update the list of job descriptions
+    else:
+        st.sidebar.error("Please enter both a name and content for the new job description.")
+
+# Update an existing job description
+if selected_job and st.sidebar.button("Update Selected Job Description"):
+    if query:
+        job_descriptions[selected_job] = query
+        save_job_descriptions(job_descriptions)
+        st.sidebar.success(f"Job description '{selected_job}' updated successfully!")
+    else:
+        st.sidebar.error("Job description content cannot be empty.")
+
