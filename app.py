@@ -1,9 +1,21 @@
 import streamlit as st
+from pdf_loader import load_btyes_io
 import json
+from core import pipeline
 import os
 
 # Path to save job descriptions
 JOB_DESC_FILE = "job_descriptions.json"
+
+def inference(query, files, embedding_type):
+    # pdfReader = PyPDF2.PdfReader(files[0])
+    # text = ''
+    # for page in pdfReader.pages:
+    #     text += page.extract_text()
+    # st.write(text)
+    results, _ = pipeline(query, load_btyes_io(files), embedding_type=embedding_type)
+    prob_per_documents = {result['name']: result['similarity'] for result in results}
+    return prob_per_documents
 
 # Function to load existing job descriptions from the file
 def load_job_descriptions():
