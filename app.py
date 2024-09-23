@@ -36,7 +36,6 @@ job_descriptions = load_job_descriptions()
 st.sidebar.header("Job Descriptions")
 selected_job = st.sidebar.selectbox("Select a job description", list(job_descriptions.keys()), key="selected_job")
 if selected_job:
-    st.sidebar.markdown("```")
     st.sidebar.code(job_descriptions[selected_job])
 
 # Main Page
@@ -82,7 +81,7 @@ if st.sidebar.button("Save New Job Description"):
         job_descriptions[new_job_name] = new_job_description
         save_job_descriptions(job_descriptions)
         st.sidebar.success(f"New job description '{new_job_name}' saved successfully!")
-        st.rerun()  # To refresh the UI and update the list of job descriptions
+        st.rerun()  
     else:
         st.sidebar.error("Please enter both a name and content for the new job description.")
 
