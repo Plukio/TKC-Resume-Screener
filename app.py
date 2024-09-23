@@ -82,7 +82,7 @@ if st.sidebar.button("Save New Job Description"):
         job_descriptions[new_job_name] = new_job_description
         save_job_descriptions(job_descriptions)
         st.sidebar.success(f"New job description '{new_job_name}' saved successfully!")
-        st.experimental_rerun()  # To refresh the UI and update the list of job descriptions
+        st.rerun()  # To refresh the UI and update the list of job descriptions
     else:
         st.sidebar.error("Please enter both a name and content for the new job description.")
 
