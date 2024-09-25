@@ -41,33 +41,37 @@ if selected_job:
 # Main Page
 st.title("👨🏼‍🎓 Resume Ranker")
 
-# Text area for Job Description
-if selected_job:
-    query = st.text_area("Job Description", height=200, value=job_descriptions[selected_job], key="query")
-else:
-    query = st.text_area("Job Description", height=200, key="query")
+col1, col2,  = st.columns(3)
 
-# File uploader for resumes
-uploaded_files = st.file_uploader("Upload Resume", accept_multiple_files=True, type=["txt", "pdf"])
-
-# Embedding type selection
-embedding_type = st.selectbox("Embedding Type", ["bert", "minilm", "tfidf"])
-
-# Button to submit the query
-if st.button("Submit"):
-    if not query:
-        st.warning("Please enter a job description.")
-    elif not uploaded_files:
-        st.warning("Please upload one or more resumes.")
+with col1:
+    # Text area for Job Description
+    if selected_job:
+        query = st.text_area("Job Description", height=200, value=job_descriptions[selected_job], key="query")
     else:
-        with st.spinner("Processing..."):
-            # Assuming 'inference' function does the processing of resumes
-            results = inference(query, uploaded_files, embedding_type)
-        st.subheader("Results")
-        for document, similarity in results.items():
-            similarity = round(similarity, 2) if similarity >= 1 else similarity
-            st.write(f"- {document}:")
-            st.progress(similarity, text=f"{similarity:.2%}")
+        query = st.text_area("Job Description", height=200, key="query")
+
+    # File uploader for resumes
+    uploaded_files = st.file_uploader("Upload Resume", accept_multiple_files=True, type=["txt", "pdf"])
+
+    # Embedding type selection
+    embedding_type = st.selectbox("Embedding Type", ["bert", "minilm", "tfidf"])
+
+    # Button to submit the query
+    if st.button("Submit"):
+        if not query:
+            st.warning("Please enter a job description.")
+        elif not uploaded_files:
+            st.warning("Please upload one or more resumes.")
+        else:
+            with col2:
+                with st.spinner("Processing..."):
+                    # Assuming 'inference' function does the processing of resumes
+                    results = inference(query, uploaded_files, embedding_type)
+                st.subheader("Results")
+                for document, similarity in results.items():
+                    similarity = round(similarity, 2) if similarity >= 1 else similarity
+                    st.write(f"- {document}:")
+                    st.progress(similarity, text=f"{similarity:.2%}")
 
 # Sidebar - Add New Job Description
 st.sidebar.subheader("Manage Job Descriptions")
