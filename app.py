@@ -62,9 +62,7 @@ if selected_job:
 # Main Page
 st.title("👨🏼‍🎓 Resume Ranker")
 
-col1, col2 = st.columns(2)
-
-with col1:
+if True:
     # Text area for Job Description
     if selected_job:
         query = st.text_area("Job Description", height=200, value=job_descriptions[selected_job], key="query")
@@ -84,7 +82,7 @@ with col1:
         elif not uploaded_files:
             st.warning("Please upload one or more resumes.")
         else:
-            with col2:
+            if True:
                 with st.spinner("Processing..."):
                     # Assuming 'inference' function does the processing of resumes
                     results = inference(query, uploaded_files, embedding_type)
