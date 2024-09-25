@@ -3,16 +3,14 @@ from pdf_loader import load_btyes_io
 import json
 from core import pipeline
 import os
+import pandas as pd
+import gspread
+from google.oauth2 import service_account
 
 # Path to save job descriptions
 JOB_DESC_FILE = "job_descriptions.json"
 
 def inference(query, files, embedding_type):
-    # pdfReader = PyPDF2.PdfReader(files[0])
-    # text = ''
-    # for page in pdfReader.pages:
-    #     text += page.extract_text()
-    # st.write(text)
     results, _ = pipeline(query, load_btyes_io(files), embedding_type=embedding_type)
     prob_per_documents = {result['name']: result['similarity'] for result in results}
     return prob_per_documents
@@ -29,6 +27,29 @@ def save_job_descriptions(job_descriptions):
     with open(JOB_DESC_FILE, "w") as f:
         json.dump(job_descriptions, f, indent=4)
 
+# Function to save feedback to Google Sheets
+def save_to_google_sheets(df, job_description_name, job_description_content):
+    # Set up the scope and credentials for Google Sheets
+    scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
+    creds = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"], scopes=scope)
+    client = gspread.authorize(creds)
+    
+    # Open the Google Sheet (replace 'Resume Feedback' with your sheet name)
+    sheet = client.open("Resume Feedback").sheet1  # Adjust as needed
+    
+    # Prepare data to append
+    for _, row in df.iterrows():
+        data_to_append = [
+            job_description_name,
+            row['Resume'],
+            int(row['Pass to Next Round'])
+        ]
+        try:
+            sheet.append_row(data_to_append)
+        except Exception as e:
+            st.error(f"Error saving to Google Sheets: {e}")
+
 # Load job descriptions from the file or fallback to an empty dictionary
 job_descriptions = load_job_descriptions()
 
@@ -41,7 +62,7 @@ if selected_job:
 # Main Page
 st.title("👨🏼‍🎓 Resume Ranker")
 
-col1, col2,  = st.columns(2)
+col1, col2 = st.columns(2)
 
 with col1:
     # Text area for Job Description
@@ -68,10 +89,18 @@ with col1:
                     # Assuming 'inference' function does the processing of resumes
                     results = inference(query, uploaded_files, embedding_type)
                 st.subheader("Results")
-                for document, similarity in results.items():
-                    similarity = round(similarity, 2) if similarity >= 1 else similarity
-                    st.write(f"- {document}:")
-                    st.progress(similarity, text=f"{similarity:.2%}")
+                # Create a DataFrame from results
+                data = [{'Resume': doc, 'Similarity': sim} for doc, sim in results.items()]
+                df_results = pd.DataFrame(data)
+                df_results['Pass to Next Round'] = False
+                edited_df = st.data_editor(df_results, use_container_width=True)
+                if st.button('Save Feedback'):
+                    if selected_job:
+                        job_description_name = selected_job
+                    else:
+                        job_description_name = 'Custom Job Description'
+                    save_to_google_sheets(edited_df, job_description_name, query)
+                    st.success('Feedback saved to Google Sheets!')
 
 # Sidebar - Add New Job Description
 st.sidebar.subheader("Manage Job Descriptions")
@@ -85,7 +114,7 @@ if st.sidebar.button("Save New Job Description"):
         job_descriptions[new_job_name] = new_job_description
         save_job_descriptions(job_descriptions)
         st.sidebar.success(f"New job description '{new_job_name}' saved successfully!")
-        st.rerun()  
+        st.experimental_rerun()  
     else:
         st.sidebar.error("Please enter both a name and content for the new job description.")
 
@@ -97,4 +126,3 @@ if selected_job and st.sidebar.button("Update Selected Job Description"):
         st.sidebar.success(f"Job description '{selected_job}' updated successfully!")
     else:
         st.sidebar.error("Job description content cannot be empty.")
-
