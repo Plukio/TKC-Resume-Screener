@@ -91,7 +91,7 @@ if st.button("Submit"):
             df_results = pd.DataFrame(data)
             st.session_state["df_results"] = df_results
 
-if st.session_state["df_results"] is None:
+if "df_results" not in st.session_state.keys():
     st.warning('Plesae summit resumes', icon="⚠️")
 else:
     df_results = st.session_state["df_results"]
