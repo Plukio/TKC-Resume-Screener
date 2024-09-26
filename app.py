@@ -95,19 +95,20 @@ if "df_results" not in st.session_state.keys():
     st.warning('Plesae summit resumes', icon="⚠️")
 else:
     df_results = st.session_state["df_results"]
+    resume_options = list(df_results['Resume'])
+    st.write("Please rank the resumes by selecting them in order of priority:")
 
-st.write("Please rank the resumes by selecting them in order of priority:")
-resume_options = list(df_results['Resume'])
-ranked_resumes = st.multiselect(
+    ranked_resumes = st.multiselect(
                 "Select resumes in order of preference",
                 resume_options,
                 default=resume_options
             )
+    for i, resume in enumerate(ranked_resumes):
+        df_results.loc[df_results['Resume'] == resume, 'Rank'] = i + 1
+    df_results.to_csv('results.csv', index=False)
 
-            # Assign ranks based on user selection
-for i, resume in enumerate(ranked_resumes):
-    df_results.loc[df_results['Resume'] == resume, 'Rank'] = i + 1
-df_results.to_csv('results.csv', index=False)
+
+
 
 if os.path.exists('results.csv'):
     df_results = pd.read_csv('results.csv')
