@@ -90,23 +90,19 @@ if st.button("Submit"):
             data = [{'Resume': doc, 'Similarity': sim} for doc, sim in results.items()]
             df_results = pd.DataFrame(data)
 
-            # Use multiselect for ranking resumes
-            st.write("Please rank the resumes by selecting them in order of priority:")
-            resume_options = list(df_results['Resume'])
-            ranked_resumes = st.multiselect(
+st.write("Please rank the resumes by selecting them in order of priority:")
+resume_options = list(df_results['Resume'])
+ranked_resumes = st.multiselect(
                 "Select resumes in order of preference",
                 resume_options,
                 default=resume_options
             )
 
             # Assign ranks based on user selection
-            for i, resume in enumerate(ranked_resumes):
-                df_results.loc[df_results['Resume'] == resume, 'Rank'] = i + 1
+for i, resume in enumerate(ranked_resumes):
+    df_results.loc[df_results['Resume'] == resume, 'Rank'] = i + 1
+df_results.to_csv('results.csv', index=False)
 
-            # Save rankings to CSV for further use
-            df_results.to_csv('results.csv', index=False)
-
-# Load the CSV and allow saving feedback
 if os.path.exists('results.csv'):
     df_results = pd.read_csv('results.csv')
 
