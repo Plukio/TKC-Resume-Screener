@@ -95,6 +95,7 @@ if "df_results" not in st.session_state.keys():
     st.warning('Plesae summit resumes', icon="⚠️")
 else:
     df_results = st.session_state["df_results"]
+    st.dataframe(df_results)
     resume_options = list(df_results['Resume'])
     st.write("Please rank the resumes by selecting them in order of priority:")
 
