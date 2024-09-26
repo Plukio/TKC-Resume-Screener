@@ -84,11 +84,11 @@ if st.button("Submit"):
                 with st.spinner("Processing..."):
                     # Assuming 'inference' function does the processing of resumes
                     results = inference(query, uploaded_files, embedding_type)
-                st.subheader("Results")
-                # Create a DataFrame from results
-                data = [{'Resume': doc, 'Similarity': sim} for doc, sim in results.items()]
-                df_results = pd.DataFrame(data)
-                df_results['Pass to Next Round'] = False
+                    st.subheader("Results")
+                    # Create a DataFrame from results
+                    data = [{'Resume': doc, 'Similarity': sim} for doc, sim in results.items()]
+                    df_results = pd.DataFrame(data)
+                    df_results['Pass to Next Round'] = False
                 
 if df_results:                
     edited_df = st.data_editor(df_results, use_container_width=True)
