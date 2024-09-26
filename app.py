@@ -90,15 +90,14 @@ if st.button("Submit"):
                     df_results = pd.DataFrame(data)
                     df_results['Pass to Next Round'] = False
                 
-                    if df_results:                
-                        edited_df = st.data_editor(df_results, use_container_width=True)
-                        if st.button('Save Feedback'):
-                            if selected_job:
-                                job_description_name = selected_job
-                            else:
-                                job_description_name = 'Custom Job Description'
-                                save_to_google_sheets(edited_df, job_description_name, query)
-                                st.success('Feedback saved to Google Sheets!')
+                    edited_df = st.data_editor(df_results, use_container_width=True)
+                    if st.button('Save Feedback'):
+                        if selected_job:
+                            job_description_name = selected_job
+                        else:
+                            job_description_name = 'Custom Job Description'
+                            save_to_google_sheets(edited_df, job_description_name, query)
+                            st.success('Feedback saved to Google Sheets!')
 
 # Sidebar - Add New Job Description
 st.sidebar.subheader("Manage Job Descriptions")
