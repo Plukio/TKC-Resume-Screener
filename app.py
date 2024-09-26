@@ -43,7 +43,7 @@ def save_to_google_sheets(df, job_description_name, job_description_content):
         data_to_append = [
             job_description_name,
             row['Resume'],
-            int(row['Pass to Next Round'])
+            row['Rank']
         ]
         try:
             sheet.append_row(data_to_append)
@@ -62,43 +62,55 @@ if selected_job:
 # Main Page
 st.title("👨🏼‍🎓 Resume Ranker")
 
-    # Text area for Job Description
+# Text area for Job Description
 if selected_job:
-        query = st.text_area("Job Description", height=200, value=job_descriptions[selected_job], key="query")
+    query = st.text_area("Job Description", height=200, value=job_descriptions[selected_job], key="query")
 else:
-        query = st.text_area("Job Description", height=200, key="query")
+    query = st.text_area("Job Description", height=200, key="query")
 
-    # File uploader for resumes
+# File uploader for resumes
 uploaded_files = st.file_uploader("Upload Resume", accept_multiple_files=True, type=["txt", "pdf"])
 
-    # Embedding type selection
+# Embedding type selection
 embedding_type = st.selectbox("Embedding Type", ["bert", "minilm", "tfidf"])
 
-    # Button to submit the query
+# Button to submit the query
 if st.button("Submit"):
-        if not query:
-            st.warning("Please enter a job description.")
-        elif not uploaded_files:
-            st.warning("Please upload one or more resumes.")
+    if not query:
+        st.warning("Please enter a job description.")
+    elif not uploaded_files:
+        st.warning("Please upload one or more resumes.")
+    else:
+        with st.spinner("Processing..."):
+            # Assuming 'inference' function does the processing of resumes
+            results = inference(query, uploaded_files, embedding_type)
+            st.subheader("Results")
+            
+            # Create a DataFrame from results
+            data = [{'Resume': doc, 'Similarity': sim} for doc, sim in results.items()]
+            df_results = pd.DataFrame(data)
+            st.write("Please assign an order/rank for each resume (1 = highest priority)")
+            
+            # Add input box for user to provide ranking
+            for i in range(len(df_results)):
+                df_results.loc[i, 'Rank'] = st.number_input(f"Rank for {df_results.loc[i, 'Resume']}", min_value=1, max_value=len(df_results), step=1, value=i + 1)
+            
+            # Save rankings to CSV for further use
+            df_results.to_csv('results.csv', index=False)
+
+# Load the CSV and allow editing
+if os.path.exists('results.csv'):
+    df_results = pd.read_csv('results.csv')
+    
+    # Button to save feedback
+    if st.button('Save Feedback'):
+        if selected_job:
+            job_description_name = selected_job
         else:
-            with st.spinner("Processing..."):
-                # Assuming 'inference' function does the processing of resumes
-                results = inference(query, uploaded_files, embedding_type)
-                st.subheader("Results")
-                # Create a DataFrame from results
-                data = [{'Resume': doc, 'Similarity': sim} for doc, sim in results.items()]
-                df_results = pd.DataFrame(data)
-                df_results['Pass to Next Round'] = False
-                df_results.to_csv('results.csv')
-        df_results = pd.read_csv('results.csv')
-        edited_df = st.data_editor(df_results, use_container_width=True)
-        if st.button('Save Feedback'):
-            if selected_job:
-                job_description_name = selected_job
-            else:
-                job_description_name = 'Custom Job Description'
-            save_to_google_sheets(edited_df, job_description_name, query)
-            st.success('Feedback saved to Google Sheets!')
+            job_description_name = 'Custom Job Description'
+        
+        save_to_google_sheets(df_results, job_description_name, query)
+        st.success('Feedback saved to Google Sheets!')
 
 # Sidebar - Add New Job Description
 st.sidebar.subheader("Manage Job Descriptions")
