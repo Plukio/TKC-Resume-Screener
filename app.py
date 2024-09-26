@@ -29,26 +29,26 @@ def save_job_descriptions(job_descriptions):
 
 # Function to save feedback to Google Sheets
 def save_to_google_sheets(df, job_description_name, job_description_content):
-    # Set up the scope and credentials for Google Sheets
-    scope = ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
-    creds = service_account.Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"], scopes=scope)
-    client = gspread.authorize(creds)
-    
-    # Open the Google Sheet (replace 'Resume Feedback' with your sheet name)
-    sheet = client.open("Resume Feedback").sheet1  # Adjust as needed
-    
-    # Prepare data to append
-    for _, row in df.iterrows():
-        data_to_append = [
-            job_description_name,
-            row['Resume'],
-            row['Rank']
-        ]
-        try:
+    try:
+        # Set up the scope and credentials for Google Sheets
+        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+        creds = service_account.Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"], scopes=scope)
+        client = gspread.authorize(creds)
+        
+        # Open the Google Sheet (replace 'Resume Feedback' with your sheet name)
+        sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/11by73OTHm0PX2Ai8uO_cT87vHlWjKbbEjV7IupGehvg/edit?gid=0#gid=0").sheet1  # Adjust as needed
+        
+        # Prepare data to append
+        for _, row in df.iterrows():
+            data_to_append = [
+                job_description_name,
+                row['Resume'],
+                row['Rank']
+            ]
             sheet.append_row(data_to_append)
-        except Exception as e:
-            st.error(f"Error saving to Google Sheets: {e}")
+    except Exception as e:
+        st.error(f"Error saving to Google Sheets: {e}")
 
 # Load job descriptions from the file or fallback to an empty dictionary
 job_descriptions = load_job_descriptions()
@@ -91,26 +91,30 @@ if st.button("Submit"):
             df_results = pd.DataFrame(data)
             st.session_state["df_results"] = df_results
 
-if "df_results" not in st.session_state.keys():
-    st.warning('Plesae summit resumes', icon="⚠️")
+# Handling session state for results
+if "df_results" not in st.session_state:
+    st.warning('Please submit resumes to rank them', icon="⚠️")
 else:
     df_results = st.session_state["df_results"]
     st.dataframe(df_results)
+    
+    # Ranking resumes using multiselect
     resume_options = list(df_results['Resume'])
     st.write("Please rank the resumes by selecting them in order of priority:")
 
     ranked_resumes = st.multiselect(
-                "Select resumes in order of preference",
-                resume_options,
-                default=resume_options
-            )
+        "Select resumes in order of preference",
+        resume_options,
+        default=resume_options
+    )
+
     for i, resume in enumerate(ranked_resumes):
         df_results.loc[df_results['Resume'] == resume, 'Rank'] = i + 1
+    
+    # Save rankings to CSV
     df_results.to_csv('results.csv', index=False)
 
-
-
-
+# Load the CSV and allow saving feedback
 if os.path.exists('results.csv'):
     df_results = pd.read_csv('results.csv')
 
