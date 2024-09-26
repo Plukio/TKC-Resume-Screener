@@ -6,29 +6,16 @@ import os
 import pandas as pd
 import gspread
 from google.oauth2 import service_account
+from datetime import datetime
 
-# Path to save job descriptions
-JOB_DESC_FILE = "job_descriptions.json"
-
+# Function to perform inference
 def inference(query, files, embedding_type):
     results, _ = pipeline(query, load_btyes_io(files), embedding_type=embedding_type)
     prob_per_documents = {result['name']: result['similarity'] for result in results}
     return prob_per_documents
 
-# Function to load existing job descriptions from the file
-def load_job_descriptions():
-    if os.path.exists(JOB_DESC_FILE):
-        with open(JOB_DESC_FILE, "r") as f:
-            return json.load(f)
-    return {}
-
-# Function to save job descriptions to the file
-def save_job_descriptions(job_descriptions):
-    with open(JOB_DESC_FILE, "w") as f:
-        json.dump(job_descriptions, f, indent=4)
-
-# Function to save feedback to Google Sheets
-def save_to_google_sheets(df, job_description_name, job_description_content):
+# Function to save feedback to Google Sheets, including the query and timestamp
+def save_to_google_sheets(df, query_text):
     try:
         # Set up the scope and credentials for Google Sheets
         scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
@@ -36,37 +23,29 @@ def save_to_google_sheets(df, job_description_name, job_description_content):
             st.secrets["gcp_service_account"], scopes=scope)
         client = gspread.authorize(creds)
         
-        # Open the Google Sheet (replace 'Resume Feedback' with your sheet name)
-        sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/11by73OTHm0PX2Ai8uO_cT87vHlWjKbbEjV7IupGehvg/edit?gid=0#gid=0").sheet1  # Adjust as needed
+        # Open the Google Sheet (replace with your own Google Sheet URL)
+        sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/11by73OTHm0PX2Ai8uO_cT87vHlWjKbbEjV7IupGehvg/edit?gid=0#gid=0").sheet1
         
-        # Prepare data to append
+        # Get the current timestamp
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Prepare data to append: Resume, Rank, Query Text, Timestamp
         for _, row in df.iterrows():
             data_to_append = [
-                job_description_name,
-                row['Resume'],
-                row['Rank']
+                row['Resume'],         # Resume Name
+                row['Rank'],           # Rank
+                query_text,            # Job Description (query text)
+                timestamp              # Timestamp
             ]
             sheet.append_row(data_to_append)
     except Exception as e:
         st.error(f"Error saving to Google Sheets: {e}")
 
-# Load job descriptions from the file or fallback to an empty dictionary
-job_descriptions = load_job_descriptions()
-
-# Sidebar for Job Descriptions
-st.sidebar.header("Job Descriptions")
-selected_job = st.sidebar.selectbox("Select a job description", list(job_descriptions.keys()), key="selected_job")
-if selected_job:
-    st.sidebar.code(job_descriptions[selected_job])
-
 # Main Page
 st.title("👨🏼‍🎓 Resume Ranker")
 
 # Text area for Job Description
-if selected_job:
-    query = st.text_area("Job Description", height=200, value=job_descriptions[selected_job], key="query")
-else:
-    query = st.text_area("Job Description", height=200, key="query")
+query = st.text_area("Enter the Job Description", height=200, key="query")
 
 # File uploader for resumes
 uploaded_files = st.file_uploader("Upload Resume", accept_multiple_files=True, type=["txt", "pdf"])
@@ -82,7 +61,7 @@ if st.button("Submit"):
         st.warning("Please upload one or more resumes.")
     else:
         with st.spinner("Processing..."):
-            # Assuming 'inference' function does the processing of resumes
+            # Process resumes based on the job description
             results = inference(query, uploaded_files, embedding_type)
             st.subheader("Results")
             
@@ -91,14 +70,14 @@ if st.button("Submit"):
             df_results = pd.DataFrame(data)
             st.session_state["df_results"] = df_results
 
-# Handling session state for results
+# Handle session state for results
 if "df_results" not in st.session_state:
     st.warning('Please submit resumes to rank them', icon="⚠️")
 else:
     df_results = st.session_state["df_results"]
     st.dataframe(df_results)
     
-    # Ranking resumes using multiselect
+    # Allow user to rank resumes using multiselect
     resume_options = list(df_results['Resume'])
     st.write("Please rank the resumes by selecting them in order of priority:")
 
@@ -108,6 +87,7 @@ else:
         default=resume_options
     )
 
+    # Assign ranks based on user input
     for i, resume in enumerate(ranked_resumes):
         df_results.loc[df_results['Resume'] == resume, 'Rank'] = i + 1
     
@@ -120,35 +100,5 @@ if os.path.exists('results.csv'):
 
     # Button to save feedback
     if st.button('Save Feedback'):
-        if selected_job:
-            job_description_name = selected_job
-        else:
-            job_description_name = 'Custom Job Description'
-        
-        save_to_google_sheets(df_results, job_description_name, query)
+        save_to_google_sheets(df_results, query)
         st.success('Feedback saved to Google Sheets!')
-
-# Sidebar - Add New Job Description
-st.sidebar.subheader("Manage Job Descriptions")
-
-# Add new job description input fields
-new_job_name = st.sidebar.text_input("New Job Description Name", key="new_job_name")
-new_job_description = st.sidebar.text_area("New Job Description Content", height=150, key="new_job_description")
-
-if st.sidebar.button("Save New Job Description"):
-    if new_job_name and new_job_description:
-        job_descriptions[new_job_name] = new_job_description
-        save_job_descriptions(job_descriptions)
-        st.sidebar.success(f"New job description '{new_job_name}' saved successfully!")
-        st.experimental_rerun()  
-    else:
-        st.sidebar.error("Please enter both a name and content for the new job description.")
-
-# Update an existing job description
-if selected_job and st.sidebar.button("Update Selected Job Description"):
-    if query:
-        job_descriptions[selected_job] = query
-        save_job_descriptions(job_descriptions)
-        st.sidebar.success(f"Job description '{selected_job}' updated successfully!")
-    else:
-        st.sidebar.error("Job description content cannot be empty.")
