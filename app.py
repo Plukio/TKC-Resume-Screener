@@ -89,7 +89,9 @@ if st.button("Submit"):
             # Create a DataFrame from results
             data = [{'Resume': doc, 'Similarity': sim} for doc, sim in results.items()]
             df_results = pd.DataFrame(data)
+            st.session_state["df_results"] = df_results
 
+df_results = st.session_state["df_results"]
 st.write("Please rank the resumes by selecting them in order of priority:")
 resume_options = list(df_results['Resume'])
 ranked_resumes = st.multiselect(
