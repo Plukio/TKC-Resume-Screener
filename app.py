@@ -91,7 +91,11 @@ if st.button("Submit"):
             df_results = pd.DataFrame(data)
             st.session_state["df_results"] = df_results
 
-df_results = st.session_state["df_results"]
+if st.session_state["df_results"] is None:
+    st.warning('Plesae summit resumes', icon="⚠️")
+else:
+    df_results = st.session_state["df_results"]
+
 st.write("Please rank the resumes by selecting them in order of priority:")
 resume_options = list(df_results['Resume'])
 ranked_resumes = st.multiselect(
