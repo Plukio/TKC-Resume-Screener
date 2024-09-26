@@ -81,23 +81,24 @@ if st.button("Submit"):
         elif not uploaded_files:
             st.warning("Please upload one or more resumes.")
         else:
-                with st.spinner("Processing..."):
-                    # Assuming 'inference' function does the processing of resumes
-                    results = inference(query, uploaded_files, embedding_type)
-                    st.subheader("Results")
-                    # Create a DataFrame from results
-                    data = [{'Resume': doc, 'Similarity': sim} for doc, sim in results.items()]
-                    df_results = pd.DataFrame(data)
-                    df_results['Pass to Next Round'] = False
-                
-                    edited_df = st.data_editor(df_results, use_container_width=True)
-                    if st.button('Save Feedback'):
-                        if selected_job:
-                            job_description_name = selected_job
-                        else:
-                            job_description_name = 'Custom Job Description'
-                            save_to_google_sheets(edited_df, job_description_name, query)
-                            st.success('Feedback saved to Google Sheets!')
+            with st.spinner("Processing..."):
+                # Assuming 'inference' function does the processing of resumes
+                results = inference(query, uploaded_files, embedding_type)
+                st.subheader("Results")
+                # Create a DataFrame from results
+                data = [{'Resume': doc, 'Similarity': sim} for doc, sim in results.items()]
+                df_results = pd.DataFrame(data)
+                df_results['Pass to Next Round'] = False
+                df_results.to_csv('results.csv')
+        df_results = pd.read_csv('results.csv')
+        edited_df = st.data_editor(df_results, use_container_width=True)
+        if st.button('Save Feedback'):
+            if selected_job:
+                job_description_name = selected_job
+            else:
+                job_description_name = 'Custom Job Description'
+            save_to_google_sheets(edited_df, job_description_name, query)
+            st.success('Feedback saved to Google Sheets!')
 
 # Sidebar - Add New Job Description
 st.sidebar.subheader("Manage Job Descriptions")
