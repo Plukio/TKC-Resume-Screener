@@ -56,7 +56,7 @@ def fetch_recent_job_descriptions():
         all_records = sheet.get_all_values()
         
         # Extract the "C" column (3rd column)
-        column_c_data = [row[2] for row in all_records if len(row) > 2]  # Column C is index 2
+        column_c_data = list(set([row[2] for row in all_records if len(row) > 2]))  # Column C is index 2
         return column_c_data
     except Exception as e:
         st.error(f"Error fetching column C from Google Sheets: {e}")
