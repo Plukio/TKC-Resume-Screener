@@ -41,11 +41,42 @@ def save_to_google_sheets(df, query_text):
     except Exception as e:
         st.error(f"Error saving to Google Sheets: {e}")
 
-# Main Page
+def fetch_recent_job_descriptions():
+    try:
+        # Set up the scope and credentials for Google Sheets
+        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+        creds = service_account.Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"], scopes=scope)
+        client = gspread.authorize(creds)
+        
+        # Open the Google Sheet
+        sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/11by73OTHm0PX2Ai8uO_cT87vHlWjKbbEjV7IupGehvg/edit?gid=0#gid=0").sheet1
+        
+        # Get all data from the sheet
+        records = sheet.get_all_records()
+        
+        # Extract and return unique job descriptions
+        job_descriptions = list(set([record['Job Description'] for record in records]))
+        return job_descriptions
+    except Exception as e:
+        st.error(f"Error fetching recent job descriptions: {e}")
+        return []
+    
 st.title("👨🏼‍🎓 Resume Ranker")
 
-# Text area for Job Description
-query = st.text_area("Enter the Job Description", height=200, key="query")
+# Fetch recent job descriptions
+recent_job_descriptions = fetch_recent_job_descriptions()
+
+# Option to select recent JD or add new one
+jd_choice = st.radio("Would you like to use a recent Job Description or add a new one?", ("Use Recent JD", "Add New JD"))
+
+if jd_choice == "Use Recent JD" and recent_job_descriptions:
+    query = st.selectbox("Choose a recent Job Description", recent_job_descriptions)
+elif jd_choice == "Add New JD":
+    query = st.text_area("Enter the Job Description", height=200, key="query")
+else:
+    st.warning("No recent job descriptions available. Please enter a new one.")
+    query = st.text_area("Enter the Job Description", height=200, key="query")
 
 # File uploader for resumes
 uploaded_files = st.file_uploader("Upload Resume", accept_multiple_files=True, type=["txt", "pdf"])
@@ -56,7 +87,7 @@ embedding_type = st.selectbox("Embedding Type", ["bert", "minilm", "tfidf"])
 # Button to submit the query
 if st.button("Submit"):
     if not query:
-        st.warning("Please enter a job description.")
+        st.warning("Please enter or select a job description.")
     elif not uploaded_files:
         st.warning("Please upload one or more resumes.")
     else:
