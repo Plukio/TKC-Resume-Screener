@@ -41,7 +41,7 @@ def save_to_google_sheets(df, query_text):
     except Exception as e:
         st.error(f"Error saving to Google Sheets: {e}")
 
-def fetch_column_c_from_sheet():
+def fetch_recent_job_descriptions():
     try:
         # Set up the scope and credentials for Google Sheets
         scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
@@ -61,7 +61,7 @@ def fetch_column_c_from_sheet():
     except Exception as e:
         st.error(f"Error fetching column C from Google Sheets: {e}")
         return []
-        
+
     
 st.title("👨🏼‍🎓 Resume Ranker")
 
