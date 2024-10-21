@@ -41,7 +41,7 @@ def save_to_google_sheets(df, query_text):
     except Exception as e:
         st.error(f"Error saving to Google Sheets: {e}")
 
-def fetch_recent_job_descriptions():
+def fetch_column_c_from_sheet():
     try:
         # Set up the scope and credentials for Google Sheets
         scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
@@ -52,15 +52,16 @@ def fetch_recent_job_descriptions():
         # Open the Google Sheet
         sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/11by73OTHm0PX2Ai8uO_cT87vHlWjKbbEjV7IupGehvg/edit?gid=0#gid=0").sheet1
         
-        # Get all data from the sheet
-        records = sheet.get_all_records()
+        # Get all records from the sheet
+        all_records = sheet.get_all_values()
         
-        # Extract and return unique job descriptions
-        job_descriptions = list(set([record['Job Description'] for record in records]))
-        return job_descriptions
+        # Extract the "C" column (3rd column)
+        column_c_data = [row[2] for row in all_records if len(row) > 2]  # Column C is index 2
+        return column_c_data
     except Exception as e:
-        st.error(f"Error fetching recent job descriptions: {e}")
+        st.error(f"Error fetching column C from Google Sheets: {e}")
         return []
+        
     
 st.title("👨🏼‍🎓 Resume Ranker")
 
